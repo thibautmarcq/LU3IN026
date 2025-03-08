@@ -54,13 +54,12 @@ class Classifier:
             label_set: ndarray avec les labels correspondants
             Hypothèse: desc_set et label_set ont le même nombre de lignes
         """
-        good = 0
-        for desc, label in zip(desc_set, label_set):
-            prediction = self.predict(desc)
-            if prediction == label:
-                good += 1
-
-        return good / len(label_set) 
+        # pred =np.array([self.predict(d) for d in desc_set])
+        # bon = np.sum(pred == label_set)
+        # total = len(label_set)
+        # return (bon /total)*100
+        yhat = np.array([self.predict(x) for x in desc_set])
+        return np.where(label_set == yhat, 1., 0.).mean()
     
 #-----------------------------------------------------------------------------------
 
@@ -179,20 +178,17 @@ class ClassifierPerceptron(Classifier):
                     - si True (par défaut): initialisation à 0 de w,
                     - si False : initialisation par tirage aléatoire de valeurs petites
         """
-        Classifier.__init__(self,input_dimension)
+        Classifier.__init__(self, input_dimension)
         self.epsilon = learning_rate
         self.init = init
         # initialisation de w
-        if (self.init):
+        if self.init:
             self.w = np.zeros(input_dimension)
         else:
             self.w = np.random.uniform(-0.001, 0.001, input_dimension)
-            
-        self.allw =[self.w.copy()] # stockage des premiers poids
-    
-    def get_allw(self):
-        return self.allw
-            
+        
+        # Initialisation de allw
+        self.allw = [self.w.copy()]
             
     def train_step(self, desc_set, label_set):
         """ Réalise une unique itération sur tous les exemples du dataset
@@ -201,68 +197,102 @@ class ClassifierPerceptron(Classifier):
                 - desc_set: ndarray avec des descriptions
                 - label_set: ndarray avec les labels correspondants
         """        
-        X_set = desc_set.copy()
-        Y_set = label_set.copy()
-        desc_lab = np.column_stack((X_set, Y_set))
-        np.random.shuffle(desc_lab)
+        indices = np.arange(desc_set.shape[0])
+        np.random.shuffle(indices)
         
-        for i in range(desc_lab.shape[0]): #parcours de tous les exemples du set
+        for i in indices: # parcours de tous les exemples du set
             # calcul du score de x par le perceptron
-            predict = self.predict(desc_lab[i, 0:2])
+            predict = self.predict(desc_set[i])
             
-            if (predict != desc_lab[i, 2]):
-                neww = self.w + self.epsilon * desc_lab[i, 2] * desc_lab[i, 0:1] # w=w+e*yi*xi
-                self.w = neww
-                self.allw.append(neww.copy())
-            
-            
-        # raise NotImplementedError("Please Implement this method")
+            if predict != label_set[i]:
+                self.w = self.w + self.epsilon * label_set[i] * desc_set[i] # w = w + epsilon * yi * xi
+                # Mise à jour de allw après chaque mise à jour des poids
+                self.allw.append(self.w.copy())
     
-    def train(self, desc_set, label_set, nb_max=100, seuil=0.001):
+    def train(self, desc_set, label_set, nb_max=1000, seuil=0.001):
         """ Apprentissage itératif du perceptron sur le dataset donné.
             Arguments:
                 - desc_set: ndarray avec des descriptions
                 - label_set: ndarray avec les labels correspondants
-                - nb_max (par défaut: 100) : nombre d'itérations maximale /
+                - nb_max (par défaut: 100) : nombre d'itérations maximale
                 - seuil (par défaut: 0.001) : seuil de convergence
             Retour: la fonction rend une liste
                 - liste des valeurs de norme de différences
         """
-        diffNorms = []
-        self.nbIter = 0 #nb itérations
-        # nb_no_chgt = 0
-        wAfter = self.w
-        while (self.nbIter < nb_max): #arret si trop d'itérations inchangées (convergence) ou trop d'itérations
-            self.nbIter+=1
-            wPrevious = wAfter
-            self.train_step(desc_set, label_set)
-            wAfter = self.w
-            #détection de changements ou non
-            if (np.linalg.norm(np.abs(wAfter - wPrevious)) < seuil):
-                break
-            # else:
-            #     nb_no_chgt = 0
-            
-            diffNorms.append(np.abs(wAfter - wPrevious))
-        return diffNorms
-        
-        # raise NotImplementedError("Please Implement this method")
+
+        liste_difference = []
     
-    def score(self,x):
+        for i in range(nb_max):
+            ancien = self.w.copy()  
+            self.train_step(desc_set, label_set)  
+            diff_norm = np.linalg.norm(self.w-ancien)  
+    
+            liste_difference.append(diff_norm)  
+
+            if diff_norm < seuil:
+                print("seuil atteint après", i, "iteration")
+                break  
+
+            # seuil = 80% dans ce cas on calcule la norme
+            # self.accuracy(data) < 80% on continue sinon break
+        return liste_difference
+    
+    def score(self, x):
         """ rend le score de prédiction sur x (valeur réelle)
             x: une description
         """
-        # on calcule le produit scalaire entre x et w (= de quel coté de la droite x se situe)
-        return np.dot(x, self.w) #si erreur faire x.T !!!
-        
-        # raise NotImplementedError("Please Implement this method")
+        # on calcule le produit scalaire entre x et w (= de quel côté de la droite x se situe)
+        return np.dot(x, self.w)
     
     def predict(self, x):
-        """ rend la prediction sur x (soit -1 ou soit +1)
+        """ rend la prédiction sur x (soit -1 ou soit +1)
             x: une description
         """
-        if (self.score(x)<0):
+        if self.score(x) < 0:
             return -1
         else:
             return 1
-        # raise NotImplementedError("Please Implement this method")
+    
+    def get_allw(self):
+        """ Retourne la liste de tous les poids w utilisés pendant l'entraînement
+        """
+        return self.allw
+    
+#-----------------------------------------------------------------------------------
+    
+class ClassifierPerceptronBiais(ClassifierPerceptron):
+    """ Perceptron de Rosenblatt avec biais
+    """
+    def __init__(self, input_dimension, learning_rate=0.01, init=True):
+        """ Constructeur de Classifier
+            Argument:
+                - input_dimension (int) : dimension de la description des exemples (>0)
+                - learning_rate (par défaut 0.01): epsilon
+                - init est le mode d'initialisation de w: 
+                    - si True (par défaut): initialisation à 0 de w,
+                    - si False : initialisation par tirage aléatoire de valeurs petites
+        """
+        # Appel du constructeur de la classe mère
+        super().__init__(input_dimension, learning_rate, init)
+        # Affichage pour information (décommentez pour la mise au point)
+        print("Init perceptron biais: w= ",self.w," learning rate= ",learning_rate)
+        
+                    
+    def train_step(self, desc_set, label_set):
+        """ Réalise une unique itération sur tous les exemples du dataset
+            donné en prenant les exemples aléatoirement.
+            Arguments:
+                - desc_set: ndarray avec des descriptions
+                - label_set: ndarray avec les labels correspondants
+        """        
+        indices = np.arange(desc_set.shape[0])
+        np.random.shuffle(indices)
+        
+        for i in indices: # parcours de tous les exemples du set
+            # calcul du score de x par le perceptron
+            score = self.score(desc_set[i])
+            
+            if score * label_set[i] < 1:
+                self.w = self.w + self.epsilon * (label_set[i] - score) * desc_set[i] # w = w + epsilon * (yi - f(xi)) * xi
+                # Mise à jour de allw après chaque mise à jour des poids
+                self.allw.append(self.w.copy())

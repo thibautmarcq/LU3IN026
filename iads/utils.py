@@ -32,14 +32,15 @@ def genere_dataset_uniform(d, n, binf=-1, bsup=1):
 
 # genere_dataset_gaussian:
 def genere_dataset_gaussian(positive_center, positive_sigma, negative_center, negative_sigma, nb_points):
-    """ les valeurs générées suivent une loi normale
-        rend un tuple (data_desc, data_labels)
+    """ 
+    Les valeurs générées suivent une loi normale.
+    Rend un tuple (data_desc, data_labels).
     """
     tirage_neg = np.random.multivariate_normal(negative_center, negative_sigma, nb_points)
     tirage_pos = np.random.multivariate_normal(positive_center, positive_sigma, nb_points)
     data_desc = np.concatenate((tirage_neg, tirage_pos))
 
-    data_labels = np.array([-1 for i in range(0,nb_points)] + [+1 for i in range(0,nb_points)])
+    data_labels = np.array([-1] * nb_points + [+1] * nb_points)
     
     return (data_desc, data_labels)
 
