@@ -12,6 +12,7 @@ Année: LU3IN026 - semestre 2 - 2024-2025, Sorbonne Université
 # Import de packages externes
 import numpy as np
 import pandas as pd
+import copy 
 
 # ---------------------------
 
@@ -230,7 +231,7 @@ class ClassifierPerceptron(Classifier):
             liste_difference.append(diff_norm)  
 
             if diff_norm < seuil:
-                print("seuil atteint après", i, "iteration")
+                # print("seuil atteint après", i, "iteration")
                 break  
 
             # seuil = 80% dans ce cas on calcule la norme
@@ -275,7 +276,7 @@ class ClassifierPerceptronBiais(ClassifierPerceptron):
         # Appel du constructeur de la classe mère
         super().__init__(input_dimension, learning_rate, init)
         # Affichage pour information (décommentez pour la mise au point)
-        print("Init perceptron biais: w= ",self.w," learning rate= ",learning_rate)
+        # print("Init perceptron biais: w= ",self.w," learning rate= ",learning_rate)
         
                     
     def train_step(self, desc_set, label_set):
@@ -296,3 +297,53 @@ class ClassifierPerceptronBiais(ClassifierPerceptron):
                 self.w = self.w + self.epsilon * (label_set[i] - score) * desc_set[i] # w = w + epsilon * (yi - f(xi)) * xi
                 # Mise à jour de allw après chaque mise à jour des poids
                 self.allw.append(self.w.copy())
+                
+#-----------------------------------------------------------------------------------
+             
+class ClassifierMultiOAA(Classifier):
+    """ Classifieur multi-classes
+    """
+    def __init__(self, cl_bin):
+        """ Constructeur de Classifier
+            Argument:
+                - input_dimension (int) : dimension de la description des exemples (espace originel)
+                - cl_bin: classifieur binaire positif/négatif
+            Hypothèse : input_dimension > 0
+        """
+        self.cl_bin = cl_bin
+        self.classifiers = []
+        # raise NotImplementedError("Vous devez implémenter cette fonction !")
+        
+        
+    def train(self, desc_set, label_set):
+        """ Permet d'entrainer le modele sur l'ensemble donné
+            réalise une itération sur l'ensemble des données prises aléatoirement
+            desc_set: ndarray avec des descriptions
+            label_set: ndarray avec les labels correspondants
+            Hypothèse: desc_set et label_set ont le même nombre de lignes
+        """    
+        self.classes = np.unique(label_set)
+        self.classifiers= [copy.deepcopy(self.cl_bin) for _ in self.classes]
+            
+        for i, cls in enumerate(self.classes):
+            binary_labels = np.where(label_set == cls, 1, -1)
+            self.classifiers[i].train(desc_set, binary_labels)
+        # raise NotImplementedError("Vous devez implémenter cette fonction !")
+        
+    
+    def score(self,x):
+        """ rend le score de prédiction sur x (valeur réelle)
+            x: une description
+        """
+        return [clf.score(x) for clf in self.classifiers]
+        # raise NotImplementedError("Vous devez implémenter cette fonction !")
+        
+    def predict(self, x):
+        """ rend la prediction sur x (soit -1 ou soit +1)
+            x: une description
+        """
+        scores = self.score(x)
+        return self.classes[np.argmax(scores)]
+        # raise NotImplementedError("Vous devez implémenter cette fonction !")
+        
+#-----------------------------------------------------------------------------------

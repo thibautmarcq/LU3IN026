@@ -44,6 +44,7 @@ def genere_dataset_gaussian(positive_center, positive_sigma, negative_center, ne
     
     return (data_desc, data_labels)
 
+
 # plot2DSet:
 def plot2DSet(desc,labels,nom_dataset= "Dataset", avec_grid=False):    
     """ ndarray * ndarray * str * bool-> affichage
@@ -90,11 +91,10 @@ def create_XOR(n, var):
         n: nombre de points voulus
         var: variance sur chaque dimension
     """
-    N = n // 2
     sigma = [[var, 0], [0, var]]
 
-    data1, labels1 = genere_dataset_gaussian([0, 0], sigma, [1, 0], sigma, N)
-    data2, labels2 = genere_dataset_gaussian([1, 1], sigma, [0, 1], sigma, N)
+    data1, labels1 = genere_dataset_gaussian([0, 0], sigma, [1, 0], sigma, n)
+    data2, labels2 = genere_dataset_gaussian([1, 1], sigma, [0, 1], sigma, n)
 
     data = np.vstack((data1, data2))
     labels = np.hstack((labels1, labels2))
