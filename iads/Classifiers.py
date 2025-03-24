@@ -13,6 +13,7 @@ Année: LU3IN026 - semestre 2 - 2024-2025, Sorbonne Université
 import numpy as np
 import pandas as pd
 import copy 
+import math
 
 # ---------------------------
 
@@ -346,4 +347,34 @@ class ClassifierMultiOAA(Classifier):
         return self.classes[np.argmax(scores)]
         # raise NotImplementedError("Vous devez implémenter cette fonction !")
         
+#-----------------------------------------------------------------------------------
+
+def classe_majoritaire(Y):
+    """ Y : (array) : array de labels
+        rend la classe majoritaire ()
+    """
+    valeurs, nb_fois = np.unique(Y,return_counts=True)
+    return valeurs[np.argmax(nb_fois)]
+
+def shannon(P):
+    """ list[Number] -> float
+        Hypothèse: P est une distribution de probabilités
+        - P: distribution de probabilités
+        rend la valeur de l'entropie de Shannon correspondante
+    """
+    res = 0
+    k = len(P)
+    for pi in P:
+        if pi > 0 and k > 1:
+            res -= pi * math.log(pi, k)
+    return res
+
+def entropie(Y):
+    """ Y : (array) : ensemble de labels de classe
+        rend l'entropie de l'ensemble Y
+    """
+    valeurs, nb_fois = np.unique(Y, return_counts=True)
+    P = nb_fois / nb_fois.sum()
+    return shannon(P)
+
 #-----------------------------------------------------------------------------------
